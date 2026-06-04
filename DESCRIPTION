@@ -14,7 +14,10 @@ Description: scStable generates synthetic single-cell RNA-seq (scRNA-seq)
     to the bulk data, samples new synthetic bulk profiles, and propagates the
     induced per-gene variation into newly simulated single-cell count matrices,
     yielding biologically plausible synthetic replicates for benchmarking and
-    method-stability evaluation.
+    method-stability evaluation. When no paired bulk RNA-seq sample is available
+    for the single-cell data, scStable can instead use a publicly available bulk
+    reference from the same tissue (e.g. GTEx) as a surrogate anchor via
+    synthreplicate_from_tissue().
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: false
@@ -47,7 +50,7 @@ Suggests:
     testthat (>= 3.0.0)
 Remotes:
     bioc::scDesign3
-URL: https://github.com/yourusername/scStable
-BugReports: https://github.com/yourusername/scStable/issues
+URL: https://github.com/cfjiang123/scStable
+BugReports: https://github.com/cfjiang123/scStable/issues
 VignetteBuilder: knitr
 Config/testthat/edition: 3

@@ -11,8 +11,18 @@ induced per-gene variation into newly simulated single-cell count matrices
 biologically plausible synthetic replicates for benchmarking and method-stability
 evaluation.
 
-> This package implements the **scStable** method described in our manuscript.
-> If you use scStable, please cite the paper (citation details to be added upon acceptance).
+scStable supports two settings:
+
+* **Paired bulk** — you have a matched bulk RNA-seq sample for the same specimen
+  as your scRNA-seq data. Use the step-by-step functions (Option A below).
+* **No paired bulk** — you do *not* have a matched bulk sample. scStable can
+  instead borrow a publicly available bulk RNA-seq reference from the **same
+  tissue** (e.g. GTEx) as a surrogate anchor, via
+  `synthreplicate_from_tissue()` (Option B below).
+
+> This package implements the **scStable** method described in our manuscript
+> submitted to *Genome Biology*. If you use scStable, please cite the paper
+> (citation details to be added upon acceptance).
 
 ## Installation
 
@@ -43,8 +53,8 @@ remotes::install_github("cfjiang123/scStable")
 
 ## Workflow
 
-scStable runs in five steps. Each step has a dedicated function, and also include a GTEx tissue wrapper
-`synthreplicate_from_tissue()`.
+scStable runs in five steps. Each step has a dedicated function, and the wrapper
+`synthreplicate_from_tissue()` chains them together for the no-paired-bulk case.
 
 | Step | Function | Purpose |
 |------|----------|---------|
@@ -56,7 +66,7 @@ scStable runs in five steps. Each step has a dedicated function, and also includ
 
 ## Quick start
 
-### Option A — step by step
+### Option A — paired bulk, step by step
 
 ```r
 library(scStable)
@@ -108,13 +118,18 @@ synthreplicate_gen_sc(
 
 Each synthetic replicate is written to `scStable_replicates/replicate<i>.csv`.
 
-### Option B — one call (GTEx tissue wrapper)
+### Option B — no paired bulk: use a public same-tissue reference
+
+When you have single-cell data but **no matched bulk sample**, point scStable at
+a public bulk reference for the same tissue (e.g. a GTEx tissue `.RDS` stored in
+`gtex_data_dir`). The wrapper loads that tissue-matched bulk, uses it as the bulk
+anchor, and runs all five steps automatically.
 
 ```r
 res <- synthreplicate_from_tissue(
-  tissue_name      = "Liver",
+  tissue_name      = "Liver",                      # must match the sc tissue
   scRNA_matrix     = scRNA_matrix,
-  gtex_data_dir    = "path/to/GTEx/tissue_data/",
+  gtex_data_dir    = "path/to/GTEx/tissue_data/",  # holds <tissue_name>.RDS
   save_dir         = "scStable_model",
   replicate_dir    = "scStable_replicates",
   number.replicate = 100
