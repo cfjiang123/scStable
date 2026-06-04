@@ -2,7 +2,7 @@
 % Please edit documentation in R/synthreplicate_from_tissue.R
 \name{synthreplicate_from_tissue}
 \alias{synthreplicate_from_tissue}
-\title{Run the full scStable pipeline for a single tissue}
+\title{Run scStable end-to-end without a paired bulk RNA-seq sample}
 \usage{
 synthreplicate_from_tissue(
   tissue_name,
@@ -28,13 +28,15 @@ synthreplicate_from_tissue(
 )
 }
 \arguments{
-\item{tissue_name}{Character; tissue identifier used to locate
-\code{<gtex_data_dir>/<tissue_name>.RDS}.}
+\item{tissue_name}{Character; tissue identifier used to locate the public bulk
+reference at \code{<gtex_data_dir>/<tissue_name>.RDS}. This tissue should match
+the tissue of origin of \code{scRNA_matrix}.}
 
 \item{scRNA_matrix}{Reference single-cell count matrix (genes x cells) with
 gene names as \code{rownames}.}
 
-\item{gtex_data_dir}{Directory containing per-tissue GTEx \code{.RDS} files.}
+\item{gtex_data_dir}{Directory containing per-tissue public bulk \code{.RDS}
+files (e.g. GTEx tissue data).}
 
 \item{save_dir}{Directory for fitted scDesign3 objects.}
 
@@ -57,12 +59,30 @@ to \code{\link{scDesign3_fit}}.}
 }
 \value{
 (Invisibly) a list collecting the outputs of each pipeline step
-(\code{ouput1}..\code{ouput5}), the \code{tissue_name} and the loaded
-\code{bulkRNA_matrix}.
+(\code{ouput1}..\code{ouput5}), the \code{tissue_name} and the loaded public
+\code{bulkRNA_matrix} used as the reference.
 }
 \description{
-\code{synthreplicate_from_tissue} is a convenience wrapper that executes the
-complete \pkg{scStable} workflow end-to-end: load bulk RNA-seq, preprocess,
-fit the bulk distribution, fit the single-cell model, sample synthetic bulk
-replicates and finally generate synthetic single-cell replicates.
+\code{synthreplicate_from_tissue} extends \pkg{scStable} to the common setting
+where \strong{no matched (paired) bulk RNA-seq sample is available} for the
+single-cell data. Instead of requiring a paired bulk matrix, it uses a publicly
+available bulk RNA-seq reference from the \strong{same tissue} (for example a
+GTEx tissue) as a surrogate bulk anchor, and then runs the complete scStable
+workflow end-to-end to generate synthetic single-cell replicates.
+}
+\details{
+The standard scStable workflow anchors single-cell simulation to a bulk RNA-seq
+sample drawn from the same biological specimen as the scRNA-seq data. When such
+a paired bulk sample does not exist, \code{synthreplicate_from_tissue}
+substitutes a public, tissue-matched bulk reference: it loads the per-tissue
+bulk object at \code{<gtex_data_dir>/<tissue_name>.RDS}, extracts the expression
+matrix and gene symbols, and feeds it to the pipeline in place of a paired bulk
+matrix. All five scStable steps are then executed in sequence:
+\code{\link{synthreplicate_prep}}, \code{\link{fit_bulk}},
+\code{\link{scDesign3_fit}}, \code{\link{synthreplicate_gen_bulk}} and
+\code{\link{synthreplicate_gen_sc}}.
+
+This makes scStable applicable to single-cell datasets that lack matched bulk
+RNA-seq, as long as a public bulk reference for the corresponding tissue is
+available.
 }
