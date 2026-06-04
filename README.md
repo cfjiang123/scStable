@@ -11,9 +11,8 @@ induced per-gene variation into newly simulated single-cell count matrices
 biologically plausible synthetic replicates for benchmarking and method-stability
 evaluation.
 
-> This package implements the **scStable** method described in our manuscript
-> submitted to *Genome Biology*. If you use scStable, please cite the paper
-> (citation details to be added upon acceptance).
+> This package implements the **scStable** method described in our manuscript.
+> If you use scStable, please cite the paper (citation details to be added upon acceptance).
 
 ## Installation
 
@@ -39,13 +38,13 @@ install.packages(c(
 
 # 4. scStable
 # install.packages("remotes")
-remotes::install_github("yourusername/scStable")
+remotes::install_github("cfjiang123/scStable")
 ```
 
 ## Workflow
 
-scStable runs in five steps. Each step has a dedicated function, and the wrapper
-`synthreplicate_from_tissue()` chains them together.
+scStable runs in five steps. Each step has a dedicated function, and also include a GTEx tissue wrapper
+`synthreplicate_from_tissue()`.
 
 | Step | Function | Purpose |
 |------|----------|---------|
