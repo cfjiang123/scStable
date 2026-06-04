@@ -20,9 +20,8 @@ scStable supports two settings:
   tissue** (e.g. GTEx) as a surrogate anchor, via
   `synthreplicate_from_tissue()` (Option B below).
 
-> This package implements the **scStable** method described in our manuscript
-> submitted to *Genome Biology*. If you use scStable, please cite the paper
-> (citation details to be added upon acceptance).
+> This package implements the **scStable** method described in our manuscript.
+> If you use scStable, please cite the paper (citation details to be added upon acceptance).
 
 ## Installation
 
