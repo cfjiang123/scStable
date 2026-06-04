@@ -1,0 +1,113 @@
+---
+title: "Generating synthetic scRNA-seq replicates with scStable"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Generating synthetic scRNA-seq replicates with scStable}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Overview
+
+**scStable** generates synthetic single-cell RNA-seq (scRNA-seq) replicates that
+are anchored to bulk RNA-seq data. The method (1) fits a multivariate model to a
+reference bulk RNA-seq matrix, (2) samples synthetic bulk profiles, and (3)
+propagates the induced per-gene variation into newly simulated single-cell count
+matrices using `scDesign3`.
+
+The pipeline has five steps, each with a dedicated function.
+
+```{r setup}
+library(scStable)
+```
+
+## Inputs
+
+You need two matrices with **gene symbols as `rownames`**:
+
+* `bulkRNA_matrix` — bulk RNA-seq counts, genes x samples (normalized).
+* `scRNA_matrix` — reference single-cell counts, genes x cells.
+
+## Step 1 — Preprocess
+
+```{r prep}
+prep <- synthreplicate_prep(
+  bulkRNA_matrix = bulkRNA_matrix,
+  scRNA_matrix   = scRNA_matrix,
+  number.pc      = 10,
+  number.gene    = 1500
+)
+```
+
+## Step 2 — Fit the bulk distribution
+
+```{r fitbulk}
+bulk_fit <- fit_bulk(
+  bulkRNA_matrix = prep$bulk,
+  n_cores        = 20
+)
+```
+
+## Step 3 — Fit the single-cell model
+
+```{r scfit}
+sc_fit <- scDesign3_fit(
+  scRNA_matrix = prep$sc,
+  top_pcs      = prep$pca,
+  save_dir     = "scStable_model",
+  use.option   = 2
+)
+```
+
+## Step 4 — Sample synthetic bulk replicates
+
+```{r genbulk}
+bulk_synth <- synthreplicate_gen_bulk(
+  bulkRNA_matrix   = prep$bulk,
+  mu               = bulk_fit$mu,
+  cov              = bulk_fit$cov,
+  optimal_c        = bulk_fit$optimal_c,
+  scRNA_matrix     = prep$sc,
+  use.cor          = 3,
+  number.replicate = 100
+)
+```
+
+## Step 5 — Generate synthetic single-cell replicates
+
+```{r gensc}
+synthreplicate_gen_sc(
+  bulkRNA_matrix = prep$bulk,
+  bulk_synth     = bulk_synth$sampling_bulk,
+  mu             = bulk_fit$mu,
+  d              = bulk_synth$d,
+  optimal_c      = bulk_fit$optimal_c,
+  scRNA_matrix   = prep$sc,
+  scRNA_list     = sc_fit,
+  match.option   = 2,
+  save.dir       = "scStable_replicates"
+)
+```
+
+Synthetic replicates are written to `scStable_replicates/replicate<i>.csv`.
+
+## One-call wrapper
+
+```{r wrapper}
+res <- synthreplicate_from_tissue(
+  tissue_name      = "Liver",
+  scRNA_matrix     = scRNA_matrix,
+  gtex_data_dir    = "path/to/GTEx/tissue_data/",
+  save_dir         = "scStable_model",
+  replicate_dir    = "scStable_replicates",
+  number.replicate = 100
+)
+```
