@@ -1,23 +1,48 @@
 ###############################################################################
-# scStable - end-to-end wrapper: run the full pipeline for one tissue
+# scStable - end-to-end wrapper: run the full pipeline WITHOUT a paired bulk
+#
+# New functionality: scStable normally anchors single-cell simulation to a bulk
+# RNA-seq sample taken from the SAME biological specimen as the scRNA-seq data.
+# This wrapper removes that requirement. When no matched/paired bulk sample is
+# available, it uses a publicly available bulk RNA-seq reference from the SAME
+# TISSUE (e.g. a GTEx tissue) as a surrogate bulk anchor, then runs the full
+# scStable pipeline end-to-end.
 ###############################################################################
 
-#' Run the full scStable pipeline for a single tissue
+#' Run scStable end-to-end without a paired bulk RNA-seq sample
 #'
-#' \code{synthreplicate_from_tissue} is a convenience wrapper that executes the
-#' complete \pkg{scStable} workflow end-to-end: it loads a GTEx bulk RNA-seq
-#' object for the requested tissue, preprocesses it together with a reference
-#' single-cell matrix (\code{\link{synthreplicate_prep}}), fits the bulk
-#' distribution (\code{\link{fit_bulk}}), fits the single-cell model
-#' (\code{\link{scDesign3_fit}}), samples synthetic bulk replicates
-#' (\code{\link{synthreplicate_gen_bulk}}) and finally generates synthetic
-#' single-cell replicates (\code{\link{synthreplicate_gen_sc}}).
+#' \code{synthreplicate_from_tissue} extends \pkg{scStable} to the common
+#' setting where \strong{no matched (paired) bulk RNA-seq sample is available}
+#' for the single-cell data. Instead of requiring a paired bulk matrix, it uses
+#' a publicly available bulk RNA-seq reference from the \strong{same tissue}
+#' (for example a GTEx tissue) as a surrogate bulk anchor, and then runs the
+#' complete scStable workflow end-to-end to generate synthetic single-cell
+#' replicates.
 #'
-#' @param tissue_name Character; tissue identifier used to locate
-#'   \code{<gtex_data_dir>/<tissue_name>.RDS}.
+#' @details
+#' The standard scStable workflow anchors single-cell simulation to a bulk
+#' RNA-seq sample drawn from the same biological specimen as the scRNA-seq data.
+#' When such a paired bulk sample does not exist,
+#' \code{synthreplicate_from_tissue} substitutes a public, tissue-matched bulk
+#' reference: it loads the per-tissue bulk object at
+#' \code{<gtex_data_dir>/<tissue_name>.RDS}, extracts the expression matrix and
+#' gene symbols, and feeds it to the pipeline in place of a paired bulk matrix.
+#' All five scStable steps are then executed in sequence:
+#' \code{\link{synthreplicate_prep}}, \code{\link{fit_bulk}},
+#' \code{\link{scDesign3_fit}}, \code{\link{synthreplicate_gen_bulk}} and
+#' \code{\link{synthreplicate_gen_sc}}.
+#'
+#' This makes scStable applicable to single-cell datasets that lack matched
+#' bulk RNA-seq, as long as a public bulk reference for the corresponding tissue
+#' is available.
+#'
+#' @param tissue_name Character; tissue identifier used to locate the public
+#'   bulk reference at \code{<gtex_data_dir>/<tissue_name>.RDS}. This tissue
+#'   should match the tissue of origin of \code{scRNA_matrix}.
 #' @param scRNA_matrix Reference single-cell count matrix (genes x cells) with
 #'   gene names as \code{rownames}.
-#' @param gtex_data_dir Directory containing per-tissue GTEx \code{.RDS} files.
+#' @param gtex_data_dir Directory containing per-tissue public bulk \code{.RDS}
+#'   files (e.g. GTEx tissue data).
 #' @param save_dir Directory for fitted scDesign3 objects.
 #' @param replicate_dir Directory for the generated synthetic replicate files.
 #' @param Cell_label Optional cell-level covariate \code{DataFrame}.
@@ -32,7 +57,7 @@
 #'
 #' @return (Invisibly) a list collecting the outputs of each pipeline step
 #'   (\code{ouput1}..\code{ouput5}), the \code{tissue_name} and the loaded
-#'   \code{bulkRNA_matrix}.
+#'   public \code{bulkRNA_matrix} used as the reference.
 #'
 #' @importFrom SummarizedExperiment assay rowData
 #' @export
@@ -82,9 +107,9 @@ synthreplicate_from_tissue <- function(
     stop("scRNA_matrix must have gene names as rownames")
   }
 
-  # -- 1. Construct file path and load bulk RNA-seq data --
+  # -- 1. Construct file path and load public (tissue-matched) bulk RNA-seq data --
   message("===============================================================")
-  message(sprintf("Loading bulk RNA-seq data for tissue: %s", tissue_name))
+  message(sprintf("Loading public bulk RNA-seq reference for tissue: %s", tissue_name))
   message("===============================================================")
 
   # Ensure directory path ends with "/"
