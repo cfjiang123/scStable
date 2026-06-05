@@ -1,23 +1,23 @@
 Package: scStable
 Type: Package
-Title: Generation of Synthetic Single-Cell RNA-seq Replicates from Bulk RNA-seq
+Title: Assessing scRNA-seq analysis stability under bulk-derived sample variation
 Version: 0.1.0
 Authors@R: c(
-    person(given = "First",
-           family = "Last",
-           email = "you@example.com",
+    person(given = "Chengfeng",
+           family = "Jiang",
+           email = "cfjiang@ucla.edu",
            role = c("aut", "cre")))
 Description: scStable generates synthetic single-cell RNA-seq (scRNA-seq)
-    replicates by combining a fitted bulk RNA-seq distribution with a
-    single-cell generative model (scDesign3). Given a reference bulk RNA-seq
-    matrix and a reference scRNA-seq matrix, scStable fits a multivariate model
-    to the bulk data, samples new synthetic bulk profiles, and propagates the
-    induced per-gene variation into newly simulated single-cell count matrices,
-    yielding biologically plausible synthetic replicates for benchmarking and
-    method-stability evaluation. When no paired bulk RNA-seq sample is available
-    for the single-cell data, scStable can instead use a publicly available bulk
-    reference from the same tissue (e.g. GTEx) as a surrogate anchor via
-    synthreplicate_from_tissue().
+    replicates from a single input scRNA-seq sample by injecting realistic
+    between-sample variation learned from multi-sample bulk RNA-seq data while
+    preserving cell-level heterogeneity. The bulk reference can be provided by
+    the user or obtained from tissue-matched public resources such as GTEx.
+    The resulting synthetic samples enable stability-aware scRNA-seq analysis,
+    including quantifying the stability of discoveries such as differentially
+    expressed genes and stress-testing analysis methods under different levels
+    of injected variation. By evaluating the consistency of results across
+    synthetic samples, scStable supports stability-driven methods and
+    hyperparameters selection.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: false
