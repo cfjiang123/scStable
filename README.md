@@ -137,4 +137,4 @@ res <- synthreplicate_from_tissue(
 
 ## License
 
-MIT © the scStable authors.
+MIT © Chengfeng Jiang.
