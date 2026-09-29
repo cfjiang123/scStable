@@ -47,7 +47,7 @@ p_a <- ggplot(umap_df, aes(UMAP1, UMAP2, color = cell_type)) +
   theme_classic() + theme(aspect.ratio = 1, legend.position = "bottom")
 ggsave("figures/validation_A_umap.pdf", p_a, width = 10, height = 4.5)
 
-# ---- pseudo-bulk of each synthetic sample on the bulk model scale log(x + c_g) ----
+# ---- pseudo-bulk of each synthetic sample on the bulk model scale ----
 optimal_c  <- fit$bulk_fit$optimal_c
 alpha      <- sum(prep$bulk) / ncol(prep$bulk) / sum(ref)
 log_pseudo <- log(sapply(samples, rowSums) * alpha + optimal_c) + fit$gen_bulk$d
