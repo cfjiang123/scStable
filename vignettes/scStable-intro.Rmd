@@ -1,113 +1,92 @@
 ---
-title: "Generating synthetic scRNA-seq replicates with scStable"
+title: "Generating synthetic scRNA-seq samples with scStable"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Generating synthetic scRNA-seq replicates with scStable}
+  %\VignetteIndexEntry{Generating synthetic scRNA-seq samples with scStable}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  eval = FALSE
-)
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
 ```
 
 ## Overview
 
-**scStable** generates synthetic single-cell RNA-seq (scRNA-seq) replicates that
-are anchored to bulk RNA-seq data. The method (1) fits a multivariate model to a
-reference bulk RNA-seq matrix, (2) samples synthetic bulk profiles, and (3)
-propagates the induced per-gene variation into newly simulated single-cell count
-matrices using `scDesign3`.
+**scStable** generates multiple synthetic scRNA-seq samples from a single
+scRNA-seq sample (the *scRNA-seq reference*). All synthetic samples keep the
+same cells as the reference and differ in gene expression by between-sample
+variation learned from multi-sample bulk RNA-seq data.
 
-The pipeline has five steps, each with a dedicated function.
+* **Reference mode**: a tissue- and condition-matched bulk RNA-seq reference is
+  available.
+* **Bulk-reference-free mode**: pre-estimated tissue-specific parameters (for
+  example from GTEx) are used instead.
 
-```{r setup}
+```{r setup, eval = FALSE}
 library(scStable)
+bulkRNA_matrix <- readRDS(system.file("extdata", "bulk_example.rds", package = "scStable"))
+scRNA_matrix   <- readRDS(system.file("extdata", "sc_example.rds",   package = "scStable"))
 ```
 
-## Inputs
+## Preprocessing
 
-You need two matrices with **gene symbols as `rownames`**:
+Select genes shared by both references, highly variable genes, and the top
+k = 10 PCs of the scRNA-seq reference.
 
-* `bulkRNA_matrix` — bulk RNA-seq counts, genes x samples (normalized).
-* `scRNA_matrix` — reference single-cell counts, genes x cells.
-
-## Step 1 — Preprocess
-
-```{r prep}
-prep <- synthreplicate_prep(
-  bulkRNA_matrix = bulkRNA_matrix,
-  scRNA_matrix   = scRNA_matrix,
-  number.pc      = 10,
-  number.gene    = 1500
-)
+```{r prep, eval = FALSE}
+prep <- synthreplicate_prep(bulkRNA_matrix, scRNA_matrix, number.gene = 1500)
 ```
 
-## Step 2 — Fit the bulk distribution
+## Step 1: model the scRNA-seq reference
 
-```{r fitbulk}
-bulk_fit <- fit_bulk(
-  bulkRNA_matrix = prep$bulk,
-  n_cores        = 20
-)
+This fits a cell-label-free scDesign3 model (NB marginals, Gaussian copula,
+PCs as covariates).
+
+```{r scfit, eval = FALSE}
+sc_fit <- scDesign3_fit(prep$sc, prep$pca, save_dir = "scStable_model")
 ```
 
-## Step 3 — Fit the single-cell model
+## Step 2: model the bulk RNA-seq reference
 
-```{r scfit}
-sc_fit <- scDesign3_fit(
-  scRNA_matrix = prep$sc,
-  top_pcs      = prep$pca,
-  save_dir     = "scStable_model",
-  use.option   = 2
-)
+```{r fitbulk, eval = FALSE}
+bulk_fit <- fit_bulk(prep$bulk, n_cores = 4)
 ```
 
-## Step 4 — Sample synthetic bulk replicates
+## Step 3: map between-sample variation
 
-```{r genbulk}
-bulk_synth <- synthreplicate_gen_bulk(
-  bulkRNA_matrix   = prep$bulk,
-  mu               = bulk_fit$mu,
-  cov              = bulk_fit$cov,
-  optimal_c        = bulk_fit$optimal_c,
-  scRNA_matrix     = prep$sc,
-  use.cor          = 3,
-  number.replicate = 100
-)
+Draw R synthetic bulk samples. The default `use.cor = NULL` uses the full
+covariance for 30 or more bulk samples and a diagonal covariance otherwise.
+
+```{r genbulk, eval = FALSE}
+bulk_synth <- synthreplicate_gen_bulk(prep$bulk, bulk_fit$mu, bulk_fit$cov,
+                                      bulk_fit$optimal_c, prep$sc,
+                                      number.replicate = 100)
 ```
 
-## Step 5 — Generate synthetic single-cell replicates
+## Step 4: generate synthetic scRNA-seq samples
 
-```{r gensc}
-synthreplicate_gen_sc(
-  bulkRNA_matrix = prep$bulk,
-  bulk_synth     = bulk_synth$sampling_bulk,
-  mu             = bulk_fit$mu,
-  d              = bulk_synth$d,
-  optimal_c      = bulk_fit$optimal_c,
-  scRNA_matrix   = prep$sc,
-  scRNA_list     = sc_fit,
-  match.option   = 2,
-  save.dir       = "scStable_replicates"
-)
+`scaling_factor` is the scale factor λ: `0` injects no variation, `1` injects
+realistic variation, and values above `1` amplify it.
+
+```{r gensc, eval = FALSE}
+files <- synthreplicate_gen_sc(prep$bulk, bulk_synth$sampling_bulk, bulk_fit$mu,
+                               bulk_synth$d, bulk_fit$optimal_c, prep$sc, sc_fit,
+                               scaling_factor = 1, save.dir = "scStable_samples")
 ```
 
-Synthetic replicates are written to `scStable_replicates/replicate<i>.csv`.
+## Bulk-reference-free mode
 
-## One-call wrapper
+Save the parameters once per tissue, then reuse them:
 
-```{r wrapper}
+```{r free, eval = FALSE}
+saveRDS(fit_bulk(bulkRNA_matrix, n_cores = 4), "blood_params.rds")
+
 res <- synthreplicate_from_tissue(
-  tissue_name      = "Liver",
   scRNA_matrix     = scRNA_matrix,
-  gtex_data_dir    = "path/to/GTEx/tissue_data/",
+  bulk_params      = "blood_params.rds",
   save_dir         = "scStable_model",
-  replicate_dir    = "scStable_replicates",
+  replicate_dir    = "scStable_samples_free",
   number.replicate = 100
 )
 ```
