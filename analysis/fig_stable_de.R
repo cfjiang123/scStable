@@ -3,8 +3,6 @@
 #   A  95% quantile intervals of q for example genes; density of interval length
 #   B  reference DE rank vs stability rank (interval length) for six tests
 #   stable DE genes: reference q < 0.05 and upper interval end < 0.05
-# (The manuscript figure also shows KEGG enrichment of stable vs other DE genes;
-#  this needs real gene symbols and is omitted here.)
 suppressPackageStartupMessages({
   library(Seurat)
   library(ggplot2)
@@ -24,7 +22,7 @@ sample_files <- list.files("data/synthetic/lambda_1", "^replicate\\d+\\.csv$", f
 samples <- lapply(sample_files, function(f)
   as.matrix(read.table(f, sep = "\t", header = TRUE, check.names = FALSE)))
 
-# q-values (Seurat Bonferroni-adjusted p) of each test; genes filtered by FindMarkers are NA
+# Seurat Bonferroni-adjusted p of each test
 find_de <- function(counts) {
   seu <- CreateSeuratObject(as(counts, "CsparseMatrix"), min.cells = 0, min.features = 0)
   seu <- NormalizeData(seu, verbose = FALSE)
