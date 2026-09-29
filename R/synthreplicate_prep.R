@@ -1,16 +1,10 @@
 ###############################################################################
-# scStable - step 1: filter the bulk RNA-seq and scRNA-seq
-# input : bulk RNA-seq matrix (with names, normalized),
-#         scRNA-seq matrix (with names),
-#         scRNA-seq cell type (optional, not used)
-# output: filtered bulk RNA-seq matrix (with names),
-#         filtered scRNA-seq matrix (with names),
-#         top PCs (with cell names)
+# scStable - preprocessing: shared genes, HVGs and PCs
 ###############################################################################
 
-#' Preprocess bulk and single-cell RNA-seq data for scStable
+#' Preprocess the scRNA-seq reference and the bulk RNA-seq reference
 #'
-#' \code{synthreplicate_prep} is the first step of the \pkg{scStable} workflow.
+#' \code{synthreplicate_prep} prepares the inputs of the \pkg{scStable} workflow.
 #' It harmonises a bulk RNA-seq matrix and a reference scRNA-seq matrix to a
 #' common, informative gene set: genes are filtered by zero-count frequency in
 #' both modalities, highly variable genes (HVGs) are selected from the
@@ -18,8 +12,10 @@
 #' components of the single-cell HVG space are computed for downstream
 #' modelling.
 #'
-#' @param bulkRNA_matrix Numeric matrix of (normalized) bulk RNA-seq counts with
-#'   gene names as \code{rownames} and samples as columns.
+#' @param bulkRNA_matrix Numeric matrix of bulk RNA-seq counts (or CPM) with
+#'   gene names as \code{rownames} and samples as columns (reference mode).
+#'   Use \code{NULL} in the bulk-reference-free mode; only the scRNA-seq
+#'   filters are then applied and \code{bulk} is returned as \code{NULL}.
 #' @param scRNA_matrix Numeric or sparse matrix of single-cell RNA-seq counts
 #'   with gene names as \code{rownames} and cells as columns.
 #' @param use.pc Logical; if \code{TRUE} (default) compute and return the top
@@ -45,23 +41,30 @@
 synthreplicate_prep <- function(bulkRNA_matrix,
                                 scRNA_matrix,
                                 use.pc       = TRUE,
-                                number.pc    = 20,
+                                number.pc    = 10,
                                 number.gene  = 2000,
                                 bulk_freq    = 0.2,
                                 sc_freq = 0.95,
                                 min.cells    = 2,
                                 select_genes = NULL) {
   # 0. Check inputs: both matrices must have rownames = gene names
-  if (is.null(rownames(bulkRNA_matrix)) ||
-      is.null(rownames(scRNA_matrix))) {
-    stop("bulkRNA_matrix or scRNA_matrix must contain gene names as rownames")
+  if (is.null(rownames(scRNA_matrix)) ||
+      (!is.null(bulkRNA_matrix) && is.null(rownames(bulkRNA_matrix)))) {
+    stop("bulkRNA_matrix and scRNA_matrix must contain gene names as rownames")
   }
+  no_bulk <- is.null(bulkRNA_matrix)
+  if (no_bulk) bulkRNA_matrix <- matrix(0, nrow(scRNA_matrix), 0,
+                                        dimnames = list(rownames(scRNA_matrix), NULL))
 
   # 1. Filter bulk RNA-seq genes by zero-count frequency
   #    Keep genes with proportion of zeros < bulk_freq
-  min_freq <- apply(bulkRNA_matrix, 1, function(x) sum(x == min(x))/length(x))
-  indices <- which(min_freq < bulk_freq) # bulk_freq = 0.2, default
-  keep_genes = rownames(bulkRNA_matrix)[indices]
+  if (no_bulk) {
+    keep_genes <- rownames(scRNA_matrix)
+  } else {
+    min_freq <- apply(bulkRNA_matrix, 1, function(x) sum(x == min(x))/length(x))
+    indices <- which(min_freq < bulk_freq) # bulk_freq = 0.2, default
+    keep_genes = rownames(bulkRNA_matrix)[indices]
+  }
 
   min_freq <- rowMeans(scRNA_matrix == 0, na.rm = TRUE)
   indices <- which(min_freq < sc_freq)
@@ -124,7 +127,7 @@ synthreplicate_prep <- function(bulkRNA_matrix,
   }
 
   # 5. Subset bulk & single-cell matrices to HVGs
-  bulk_out <- bulkRNA_matrix_c[hvg, , drop = FALSE]
+  bulk_out <- if (no_bulk) NULL else bulkRNA_matrix_c[hvg, , drop = FALSE]
   sc_out   <- as.matrix(scRNA_matrix_c[hvg, , drop = FALSE])
 
   # 6. Return a list: filtered bulk, filtered sc, HVG names, PCA embeddings, and Seurat object

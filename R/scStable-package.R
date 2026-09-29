@@ -1,25 +1,33 @@
-#' scStable: Synthetic Single-Cell RNA-seq Replicate Generation
+#' scStable: stability-aware analysis with synthetic scRNA-seq samples
 #'
-#' The \pkg{scStable} package implements the scStable method for generating
-#' synthetic single-cell RNA-seq (scRNA-seq) replicates anchored to bulk
-#' RNA-seq data. The workflow proceeds in five steps:
+#' \pkg{scStable} generates multiple synthetic scRNA-seq samples from a single
+#' scRNA-seq sample (the \emph{scRNA-seq reference}). The samples keep the same
+#' cells as the reference and differ in gene expression by between-sample
+#' variation learned from multi-sample bulk RNA-seq data.
 #'
-#' \enumerate{
-#'   \item \code{\link{synthreplicate_prep}} -- harmonise bulk and single-cell
-#'         matrices to a shared, informative gene set and (optionally) compute
-#'         single-cell principal components.
-#'   \item \code{\link{fit_bulk}} -- fit a per-gene log-normal/multivariate
-#'         model to the bulk RNA-seq matrix.
-#'   \item \code{\link{scDesign3_fit}} -- fit a single-cell generative model
-#'         with \pkg{scDesign3}.
-#'   \item \code{\link{synthreplicate_gen_bulk}} -- sample synthetic bulk
-#'         replicates from the fitted bulk model.
-#'   \item \code{\link{synthreplicate_gen_sc}} -- propagate the synthetic bulk
-#'         variation into newly simulated single-cell count matrices.
+#' Two modes:
+#' \itemize{
+#'   \item \strong{Reference mode}: a tissue- and condition-matched
+#'         multi-sample \emph{bulk RNA-seq reference} is supplied and its
+#'         between-sample variation is estimated with \code{\link{fit_bulk}}.
+#'   \item \strong{Bulk-reference-free mode}: pre-estimated tissue-specific
+#'         parameters (e.g. learned from GTEx) are used instead; see
+#'         \code{\link{synthreplicate_from_tissue}}.
 #' }
 #'
-#' The convenience wrapper \code{\link{synthreplicate_from_tissue}} runs the
-#' full scStable pipeline end-to-end for a single tissue.
+#' Workflow (preprocessing with \code{\link{synthreplicate_prep}}, then):
+#' \enumerate{
+#'   \item \code{\link{scDesign3_fit}} -- fit a cell-label-free scRNA-seq
+#'         generative model (PCs as covariates).
+#'   \item \code{\link{fit_bulk}} -- estimate bulk-derived between-sample
+#'         variation (or use pre-estimated parameters).
+#'   \item \code{\link{synthreplicate_gen_bulk}} and
+#'         \code{\link{synthreplicate_gen_sc}} -- map the variation onto the
+#'         scRNA-seq model, with scale factor \eqn{\lambda}
+#'         (\code{scaling_factor}).
+#'   \item \code{\link{synthreplicate_gen_sc}} -- generate the synthetic
+#'         scRNA-seq samples.
+#' }
 #'
 #' @keywords internal
 "_PACKAGE"

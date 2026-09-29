@@ -1,26 +1,26 @@
 ###############################################################################
-# scStable - step 3: fit scDesign3 for scRNA-seq
-# input : filtered scRNA-seq matrix (with names), top PCs (with cell names),
-#         Cell_label (result from step 1)
-# output: scDesign3 output
+# scStable - Step 1: model the single-sample scRNA-seq reference
 ###############################################################################
 
-#' Fit a single-cell generative model for scStable
+#' Step 1: fit the scRNA-seq generative model
 #'
-#' \code{scDesign3_fit} wraps the \pkg{scDesign3} modelling pipeline
+#' \code{scDesign3_fit} wraps the \pkg{scDesign3} pipeline
 #' (\code{construct_data}, \code{fit_marginal}, \code{fit_copula},
-#' \code{extract_para}) used by \pkg{scStable} to learn a generative model of
-#' the reference single-cell data. Principal components from
-#' \code{\link{synthreplicate_prep}} can be used as continuous covariates. All
-#' intermediate objects are saved to \code{save_dir} and also returned.
+#' \code{extract_para}) to fit a negative-binomial marginal model with a
+#' Gaussian copula to the scRNA-seq reference. By default
+#' (\code{use.option = 2}) the model is cell-label-free: the top PCs from
+#' \code{\link{synthreplicate_prep}} are the cell covariates
+#' (\code{mu ~ pc1 + ... + pck}). All fitted objects are saved to
+#' \code{save_dir} and also returned.
 #'
 #' @param scRNA_matrix Single-cell count matrix (genes x cells).
 #' @param top_pcs Matrix of single-cell PC embeddings (cells x PCs).
 #' @param Cell_label Optional \code{DataFrame} of cell-level covariates (used
 #'   when \code{use.option = 1}).
 #' @param save_dir Directory in which to write the fitted scDesign3 objects.
-#' @param use.option Integer (1, 2 or 3) selecting how covariates / formulas are
-#'   constructed; see Details.
+#' @param use.option \code{2} (default): cell-label-free model using the PCs as
+#'   covariates. \code{1}: user-defined covariates from \code{Cell_label} and
+#'   \code{mu_formula} (PCs are added as columns \code{pc1}, \code{pc2}, ...).
 #' @param assay_use,celltype_col,pseudotime_col,spatial_col,other_covariates,corr_by
 #'   Arguments forwarded to \code{scDesign3::construct_data}.
 #' @param predictor,mu_formula,sigma_formula,family_marginal,n_cores_marginal,usebam,parallel_marginal
@@ -45,7 +45,7 @@ scDesign3_fit <- function(
     top_pcs,
     Cell_label           = NULL,
     save_dir,
-    use.option = 1,
+    use.option = 2,
 
     ## construct_data args
     assay_use            = "counts",
@@ -78,8 +78,10 @@ scDesign3_fit <- function(
   # 1. ensure save_dir exists
   if (!dir.exists(save_dir)) dir.create(save_dir, recursive = TRUE)
 
-  # 2. default Cell_label
+  # 2. build the SingleCellExperiment with PCs as cell covariates
+  if (!use.option %in% c(1, 2)) stop("use.option must be 1 or 2")
   if (use.option == 1) {
+    if (is.null(Cell_label)) stop("use.option = 1 requires Cell_label")
     sce <- SingleCellExperiment::SingleCellExperiment(
       assays  = list(counts = scRNA_matrix),
       colData = Cell_label
@@ -104,16 +106,6 @@ scDesign3_fit <- function(
     for (i in seq_len(ncol(top_pcs))) {
       sce[[paste0("pc", i)]] <- top_pcs[, i]
     }
-  }
-
-  if (use.option == 3) {
-    Cell_label <- S4Vectors::DataFrame(
-      cell_type = rep(1, ncol(scRNA_matrix)),
-      row.names = colnames(scRNA_matrix)
-    )
-
-    other_covariates <- paste0("pc", seq_len(ncol(top_pcs)))
-    mu_formula <- paste(other_covariates, collapse = " + ")
   }
 
 

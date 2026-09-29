@@ -1,17 +1,21 @@
 ###############################################################################
-# scStable - step 2: fit bulk distribution
-# input : filtered bulk RNA-seq matrix (with names) (result from step 1)
-# output: bulk RNA-seq matrix distribution, mu, cov, gene-specific constant
+# scStable - Step 2: model the multi-sample bulk RNA-seq reference
 ###############################################################################
 
-#' Fit the bulk RNA-seq distribution for scStable
+#' Step 2: estimate bulk-derived between-sample variation
 #'
-#' \code{fit_bulk} estimates, for each gene, a log-offset constant \code{c} that
-#' best normalises the bulk RNA-seq counts (\code{log(count + c)}), then computes
-#' the gene-wise mean vector and the gene-gene covariance matrix used by
-#' \pkg{scStable} to sample synthetic bulk replicates. The search for the
-#' optimal \code{c} is parallelised across genes with \pkg{foreach} /
-#' \pkg{doParallel}.
+#' \code{fit_bulk} is used in \strong{reference mode}. For each gene it chooses
+#' a pseudo-count \eqn{c_g} so that \eqn{\log(x_{gs} + c_g)} is approximately
+#' Gaussian across bulk samples, then estimates the mean vector
+#' \eqn{\hat\mu} and covariance matrix \eqn{\hat\Sigma} of the Gaussian bulk
+#' model. The search for \eqn{c_g} runs over \code{seq(1, c_value_max, by = step)}
+#' and stops early at the first value whose normality p-value reaches
+#' \code{p_val_threshold}; otherwise the value with the largest p-value is used.
+#'
+#' The returned list is also the \emph{pre-estimated parameter set} used by the
+#' \strong{bulk-reference-free mode}: fit it once on a large tissue-matched
+#' resource (e.g. GTEx), save it with \code{saveRDS()}, and pass it as
+#' \code{bulk_params} to \code{\link{synthreplicate_from_tissue}}.
 #'
 #' @param bulkRNA_matrix Numeric matrix of bulk RNA-seq counts (genes x samples),
 #'   typically the \code{bulk} element returned by \code{\link{synthreplicate_prep}}.
@@ -27,8 +31,11 @@
 #'   when \code{normal_test = "auto"}.
 #'
 #' @return A list with elements \code{bulk_data_counts} (log-transformed counts),
-#'   \code{mu} (gene means), \code{cov} (gene-gene covariance) and
-#'   \code{optimal_c} (per-gene log offsets).
+#'   \code{mu} (gene means), \code{cov} (gene-gene sample covariance),
+#'   \code{optimal_c} (per-gene pseudo-counts \eqn{c_g}), \code{bulk_mean}
+#'   (per-gene mean on the input scale; its sum over the genes used is the mean
+#'   bulk library size that aligns the scRNA-seq pseudo-bulk) and
+#'   \code{n_samples} (number of bulk samples).
 #'
 #' @importFrom parallel makeCluster stopCluster
 #' @importFrom doParallel registerDoParallel
@@ -124,6 +131,8 @@ fit_bulk <- function(
     bulk_data_counts = bulk_data_counts,
     mu               = mu,
     cov              = cov_m,
-    optimal_c        = optimal_c
+    optimal_c        = optimal_c,
+    bulk_mean        = rowMeans(bulkRNA_matrix),
+    n_samples        = ncol(bulkRNA_matrix)
   )
 }

@@ -1,51 +1,65 @@
 ###############################################################################
-# scStable - step 5: generate new sc
-# input : result from step 2, result from step 3, result from step 4
-# output: new scRNA-seq
+# scStable - Step 3 (part 2) + Step 4: map variation and generate samples
 ###############################################################################
 
-#' Generate synthetic single-cell RNA-seq replicates for scStable
+#' Steps 3-4: map between-sample variation and generate synthetic scRNA-seq samples
 #'
-#' \code{synthreplicate_gen_sc} is the final step of the \pkg{scStable}
-#' workflow. For each synthetic bulk replicate it derives a per-gene mapping
-#' (fold-change) factor, re-weights the scDesign3 mean matrix accordingly, and
-#' simulates a new single-cell count matrix with \code{scDesign3::simu_new}. Each
-#' synthetic replicate is written to disk as a tab-separated file.
+#' For each synthetic bulk profile from \code{\link{synthreplicate_gen_bulk}},
+#' \code{synthreplicate_gen_sc} converts it back to the pseudo-bulk scale
+#' (removing the offset \eqn{\xi_g} and inverting the log transform), computes
+#' gene-wise multiplicative adjustments \eqn{\omega_{gr}^\lambda}, re-weights the
+#' scDesign3 mean matrix and simulates a new count matrix with
+#' \code{scDesign3::simu_new}. All synthetic samples contain the same cells as
+#' the scRNA-seq reference. Each sample is written to
+#' \code{<save.dir>/replicate<r>.csv} (tab-separated, genes x cells).
 #'
-#' @param bulkRNA_matrix Filtered bulk matrix from \code{\link{synthreplicate_prep}}.
-#' @param bulk_synth Synthetic bulk matrix (genes x replicates) from
-#'   \code{\link{synthreplicate_gen_bulk}}.
-#' @param mu Gene-wise mean vector from \code{\link{fit_bulk}}.
-#' @param d Per-gene shift vector from \code{\link{synthreplicate_gen_bulk}}.
-#' @param optimal_c Per-gene log offsets from \code{\link{fit_bulk}}.
-#' @param scRNA_matrix Filtered single-cell matrix from
-#'   \code{\link{synthreplicate_prep}}.
+#' @param bulkRNA_matrix Bulk matrix from \code{\link{synthreplicate_prep}}
+#'   (reference mode); only its mean library size is used. May be \code{NULL}
+#'   if \code{lib_size} is given (bulk-reference-free mode).
+#' @param bulk_synth Synthetic bulk matrix (genes x samples),
+#'   \code{synthreplicate_gen_bulk()$sampling_bulk}.
+#' @param mu Gene-wise bulk mean from \code{\link{fit_bulk}}.
+#' @param d Per-gene offset, \code{synthreplicate_gen_bulk()$d}.
+#' @param optimal_c Per-gene pseudo-counts from \code{\link{fit_bulk}}.
+#' @param scRNA_matrix Single-cell matrix from \code{\link{synthreplicate_prep}}.
 #' @param scRNA_list The list returned by \code{\link{scDesign3_fit}}.
-#' @param match.option Integer; \code{1} precise per-gene matching, \code{2}
-#'   pseudo-bulk ratio matching.
-#' @param scaling_factor Numeric exponent applied to the per-gene mapping.
-#' @param use.pc Logical / integer flag controlling the high fold-change
-#'   correction step.
-#' @param n_cores Integer; cores passed to \code{scDesign3::simu_new}.
-#' @param sc_quantile Numeric quantile used for capping (reserved).
-#' @param save.dir Directory in which synthetic replicate files are written.
+#' @param match.option \code{2} (default, used in the manuscript) maps each
+#'   synthetic bulk profile to a predicted pseudo-bulk and divides by the
+#'   observed pseudo-bulk; \code{1} uses the ratio to the bulk mean directly.
+#' @param scaling_factor The scale factor \eqn{\lambda}: \code{0} no injected
+#'   variation, \code{1} realistic bulk-derived variation, \code{>1} amplified
+#'   variation for stress-testing.
+#' @param use.pc Logical / integer; if true, genes whose simulated total is
+#'   extremely inflated relative to the reference are rescaled after simulation.
+#' @param n_cores Cores passed to \code{scDesign3::simu_new}.
+#' @param sc_quantile Reserved; not used.
+#' @param save.dir Directory in which synthetic samples are written.
+#' @param lib_size Mean bulk library size; defaults to
+#'   \code{sum(bulkRNA_matrix) / ncol(bulkRNA_matrix)}.
 #'
-#' @return Called for its side effects: writes one
-#'   \code{replicate<i>.csv} file per synthetic replicate to \code{save.dir}.
-#'   Returns \code{NULL} invisibly.
+#' @return Invisibly, the paths of the written \code{replicate<r>.csv} files.
 #'
 #' @importFrom scDesign3 simu_new
 #' @importFrom BiocParallel MulticoreParam
 #' @importFrom stats quantile IQR median
 #' @importFrom utils write.table
 #' @export
-synthreplicate_gen_sc <-function(bulkRNA_matrix, bulk_synth, mu, d, optimal_c, scRNA_matrix, scRNA_list,
-                                 match.option = 1, scaling_factor = 1, use.pc = 1, n_cores = 1, sc_quantile = 0.995, save.dir){
+synthreplicate_gen_sc <-function(bulkRNA_matrix = NULL, bulk_synth, mu, d, optimal_c, scRNA_matrix, scRNA_list,
+                                 match.option = 2, scaling_factor = 1, use.pc = 1, n_cores = 1, sc_quantile = 0.995, save.dir,
+                                 lib_size = NULL){
+  if (!match.option %in% c(1, 2)) stop("match.option must be 1 or 2")
+  if (is.null(lib_size)) {
+    if (is.null(bulkRNA_matrix)) stop("Provide either bulkRNA_matrix or lib_size")
+    lib_size <- sum(bulkRNA_matrix) / ncol(bulkRNA_matrix)
+  }
+  if (!identical(rownames(bulk_synth), rownames(scRNA_matrix))) {
+    stop("rownames(bulk_synth) must match rownames(scRNA_matrix) in the same order")
+  }
   if (!dir.exists(save.dir)) dir.create(save.dir, recursive = TRUE)
   pseudo_bulk = rowSums(scRNA_matrix)
   e_v = quantile(pseudo_bulk, 0.75, na.rm = TRUE) + 1.5 * IQR(pseudo_bulk, na.rm = TRUE)
   names(pseudo_bulk) <- rownames(scRNA_matrix)
-  alpha = sum(bulkRNA_matrix) / ncol(bulkRNA_matrix) / sum(pseudo_bulk) # scaling
+  alpha = lib_size / sum(pseudo_bulk) # scaling
   # create mapping vector
   per_gene_mapping = list()
   if(match.option == 1){ ## precise matching
@@ -114,6 +128,7 @@ synthreplicate_gen_sc <-function(bulkRNA_matrix, bulk_synth, mu, d, optimal_c, s
 
     rm(newcount)
     rm(mean_mat)
-
+    filename
   })
+  invisible(unlist(Generate_multiple_counts))
 }
