@@ -2,14 +2,14 @@
 % Please edit documentation in R/scDesign3_fit.R
 \name{scDesign3_fit}
 \alias{scDesign3_fit}
-\title{Fit a single-cell generative model for scStable}
+\title{Step 1: fit the scRNA-seq generative model}
 \usage{
 scDesign3_fit(
   scRNA_matrix,
   top_pcs,
   Cell_label = NULL,
   save_dir,
-  use.option = 1,
+  use.option = 2,
   assay_use = "counts",
   celltype_col = "cell_type",
   pseudotime_col = NULL,
@@ -37,35 +37,37 @@ scDesign3_fit(
 
 \item{top_pcs}{Matrix of single-cell PC embeddings (cells x PCs).}
 
-\item{Cell_label}{Optional \code{DataFrame} of cell-level covariates (used when
-\code{use.option = 1}).}
+\item{Cell_label}{Optional \code{DataFrame} of cell-level covariates (used
+when \code{use.option = 1}).}
 
 \item{save_dir}{Directory in which to write the fitted scDesign3 objects.}
 
-\item{use.option}{Integer (1, 2 or 3) selecting how covariates / formulas are
-constructed.}
+\item{use.option}{\code{2} (default): cell-label-free model using the PCs as
+covariates. \code{1}: user-defined covariates from \code{Cell_label} and
+\code{mu_formula} (PCs are added as columns \code{pc1}, \code{pc2}, ...).}
 
-\item{assay_use, celltype_col, pseudotime_col, spatial_col, other_covariates, corr_by}{Arguments
-forwarded to \code{scDesign3::construct_data}.}
+\item{assay_use, celltype_col, pseudotime_col, spatial_col, other_covariates, corr_by}{Arguments forwarded to \code{scDesign3::construct_data}.}
 
-\item{predictor, mu_formula, sigma_formula, family_marginal, n_cores_marginal, usebam, parallel_marginal}{Arguments
-forwarded to \code{scDesign3::fit_marginal}.}
+\item{predictor, mu_formula, sigma_formula, family_marginal, n_cores_marginal, usebam, parallel_marginal}{Arguments forwarded to \code{scDesign3::fit_marginal}.}
 
-\item{family_copula, copula, n_cores_copula, parallel_copula}{Arguments
-forwarded to \code{scDesign3::fit_copula}.}
+\item{family_copula, copula, n_cores_copula, parallel_copula}{Arguments forwarded to \code{scDesign3::fit_copula}.}
 
-\item{n_cores_para, family_para, parallel_para}{Arguments forwarded to
-\code{scDesign3::extract_para}.}
+\item{n_cores_para, family_para, parallel_para}{Arguments forwarded to \code{scDesign3::extract_para}.}
 }
 \value{
 (Invisibly) a list with the constructed \code{SingleCellExperiment}
-(\code{scRNA_sce_pc}), the constructed data (\code{scRNA_data_pc}), the fitted
-marginals (\code{scRNA_marginal_pc}), the fitted copula
-(\code{scRNA_copula_pc}) and the extracted parameters (\code{scRNA_para_pc}).
+(\code{scRNA_sce_pc}), the constructed data (\code{scRNA_data_pc}), the
+fitted marginals (\code{scRNA_marginal_pc}), the fitted copula
+(\code{scRNA_copula_pc}) and the extracted parameters
+(\code{scRNA_para_pc}).
 }
 \description{
-\code{scDesign3_fit} wraps the \pkg{scDesign3} modelling pipeline
+\code{scDesign3_fit} wraps the \pkg{scDesign3} pipeline
 (\code{construct_data}, \code{fit_marginal}, \code{fit_copula},
-\code{extract_para}) used by \pkg{scStable} to learn a generative model of the
-reference single-cell data.
+\code{extract_para}) to fit a negative-binomial marginal model with a
+Gaussian copula to the scRNA-seq reference. By default
+(\code{use.option = 2}) the model is cell-label-free: the top PCs from
+\code{\link{synthreplicate_prep}} are the cell covariates
+(\code{mu ~ pc1 + ... + pck}). All fitted objects are saved to
+\code{save_dir} and also returned.
 }

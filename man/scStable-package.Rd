@@ -4,24 +4,48 @@
 \name{scStable-package}
 \alias{scStable}
 \alias{scStable-package}
-\title{scStable: Synthetic Single-Cell RNA-seq Replicate Generation}
+\title{scStable: stability-aware analysis with synthetic scRNA-seq samples}
 \description{
-The \pkg{scStable} package implements the scStable method for generating
-synthetic single-cell RNA-seq (scRNA-seq) replicates anchored to bulk RNA-seq
-data.
+\pkg{scStable} generates multiple synthetic scRNA-seq samples from a single
+scRNA-seq sample (the \emph{scRNA-seq reference}). The samples keep the same
+cells as the reference and differ in gene expression by between-sample
+variation learned from multi-sample bulk RNA-seq data.
 }
 \details{
-The workflow proceeds in five steps:
-\enumerate{
-  \item \code{\link{synthreplicate_prep}}
-  \item \code{\link{fit_bulk}}
-  \item \code{\link{scDesign3_fit}}
-  \item \code{\link{synthreplicate_gen_bulk}}
-  \item \code{\link{synthreplicate_gen_sc}}
+Two modes:
+\itemize{
+\item \strong{Reference mode}: a tissue- and condition-matched
+multi-sample \emph{bulk RNA-seq reference} is supplied and its
+between-sample variation is estimated with \code{\link{fit_bulk}}.
+\item \strong{Bulk-reference-free mode}: pre-estimated tissue-specific
+parameters (e.g. learned from GTEx) are used instead; see
+\code{\link{synthreplicate_from_tissue}}.
 }
-The convenience wrapper \code{\link{synthreplicate_from_tissue}} runs the full
-scStable pipeline end-to-end for a single tissue.
+
+Workflow (preprocessing with \code{\link{synthreplicate_prep}}, then):
+\enumerate{
+\item \code{\link{scDesign3_fit}} -- fit a cell-label-free scRNA-seq
+generative model (PCs as covariates).
+\item \code{\link{fit_bulk}} -- estimate bulk-derived between-sample
+variation (or use pre-estimated parameters).
+\item \code{\link{synthreplicate_gen_bulk}} and
+\code{\link{synthreplicate_gen_sc}} -- map the variation onto the
+scRNA-seq model, with scale factor \eqn{\lambda}
+(\code{scaling_factor}).
+\item \code{\link{synthreplicate_gen_sc}} -- generate the synthetic
+scRNA-seq samples.
+}
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/cfjiang123/scStable}
+  \item Report bugs at \url{https://github.com/cfjiang123/scStable/issues}
+}
+
 }
 \author{
-Maintainer: First Last \email{you@example.com}
+\strong{Maintainer}: Chengfeng Jiang \email{cfjiang@ucla.edu}
+
 }
+\keyword{internal}

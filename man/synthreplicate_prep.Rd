@@ -2,13 +2,13 @@
 % Please edit documentation in R/synthreplicate_prep.R
 \name{synthreplicate_prep}
 \alias{synthreplicate_prep}
-\title{Preprocess bulk and single-cell RNA-seq data for scStable}
+\title{Preprocess the scRNA-seq reference and the bulk RNA-seq reference}
 \usage{
 synthreplicate_prep(
   bulkRNA_matrix,
   scRNA_matrix,
   use.pc = TRUE,
-  number.pc = 20,
+  number.pc = 10,
   number.gene = 2000,
   bulk_freq = 0.2,
   sc_freq = 0.95,
@@ -17,8 +17,10 @@ synthreplicate_prep(
 )
 }
 \arguments{
-\item{bulkRNA_matrix}{Numeric matrix of (normalized) bulk RNA-seq counts with
-gene names as \code{rownames} and samples as columns.}
+\item{bulkRNA_matrix}{Numeric matrix of bulk RNA-seq counts (or CPM) with
+gene names as \code{rownames} and samples as columns (reference mode).
+Use \code{NULL} in the bulk-reference-free mode; only the scRNA-seq
+filters are then applied and \code{bulk} is returned as \code{NULL}.}
 
 \item{scRNA_matrix}{Numeric or sparse matrix of single-cell RNA-seq counts
 with gene names as \code{rownames} and cells as columns.}
@@ -33,8 +35,8 @@ principal components of the single-cell HVG space.}
 \item{bulk_freq}{Numeric in [0, 1]; keep bulk genes whose proportion of
 minimum-value (e.g. zero) entries is below this threshold.}
 
-\item{sc_freq}{Numeric in [0, 1]; keep single-cell genes whose proportion of
-zero entries is below this threshold.}
+\item{sc_freq}{Numeric in [0, 1]; keep single-cell genes whose proportion
+of zero entries is below this threshold.}
 
 \item{min.cells}{Integer passed to \code{Seurat::CreateSeuratObject}.}
 
@@ -48,10 +50,11 @@ names), \code{pca} (PC embeddings or \code{NULL}) and \code{seurat} (the
 \code{Seurat} object).
 }
 \description{
-\code{synthreplicate_prep} is the first step of the \pkg{scStable} workflow.
+\code{synthreplicate_prep} prepares the inputs of the \pkg{scStable} workflow.
 It harmonises a bulk RNA-seq matrix and a reference scRNA-seq matrix to a
 common, informative gene set: genes are filtered by zero-count frequency in
 both modalities, highly variable genes (HVGs) are selected from the
 single-cell data with \pkg{Seurat}, and (optionally) the top principal
-components of the single-cell HVG space are computed for downstream modelling.
+components of the single-cell HVG space are computed for downstream
+modelling.
 }

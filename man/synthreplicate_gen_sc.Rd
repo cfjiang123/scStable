@@ -2,62 +2,73 @@
 % Please edit documentation in R/synthreplicate_gen_sc.R
 \name{synthreplicate_gen_sc}
 \alias{synthreplicate_gen_sc}
-\title{Generate synthetic single-cell RNA-seq replicates for scStable}
+\title{Steps 3-4: map between-sample variation and generate synthetic scRNA-seq samples}
 \usage{
 synthreplicate_gen_sc(
-  bulkRNA_matrix,
+  bulkRNA_matrix = NULL,
   bulk_synth,
   mu,
   d,
   optimal_c,
   scRNA_matrix,
   scRNA_list,
-  match.option = 1,
+  match.option = 2,
   scaling_factor = 1,
   use.pc = 1,
   n_cores = 1,
   sc_quantile = 0.995,
-  save.dir
+  save.dir,
+  lib_size = NULL
 )
 }
 \arguments{
-\item{bulkRNA_matrix}{Filtered bulk matrix from \code{\link{synthreplicate_prep}}.}
+\item{bulkRNA_matrix}{Bulk matrix from \code{\link{synthreplicate_prep}}
+(reference mode); only its mean library size is used. May be \code{NULL}
+if \code{lib_size} is given (bulk-reference-free mode).}
 
-\item{bulk_synth}{Synthetic bulk matrix (genes x replicates) from
-\code{\link{synthreplicate_gen_bulk}}.}
+\item{bulk_synth}{Synthetic bulk matrix (genes x samples),
+\code{synthreplicate_gen_bulk()$sampling_bulk}.}
 
-\item{mu}{Gene-wise mean vector from \code{\link{fit_bulk}}.}
+\item{mu}{Gene-wise bulk mean from \code{\link{fit_bulk}}.}
 
-\item{d}{Per-gene shift vector from \code{\link{synthreplicate_gen_bulk}}.}
+\item{d}{Per-gene offset, \code{synthreplicate_gen_bulk()$d}.}
 
-\item{optimal_c}{Per-gene log offsets from \code{\link{fit_bulk}}.}
+\item{optimal_c}{Per-gene pseudo-counts from \code{\link{fit_bulk}}.}
 
-\item{scRNA_matrix}{Filtered single-cell matrix from
-\code{\link{synthreplicate_prep}}.}
+\item{scRNA_matrix}{Single-cell matrix from \code{\link{synthreplicate_prep}}.}
 
 \item{scRNA_list}{The list returned by \code{\link{scDesign3_fit}}.}
 
-\item{match.option}{Integer; \code{1} precise per-gene matching, \code{2}
-pseudo-bulk ratio matching.}
+\item{match.option}{\code{2} (default, used in the manuscript) maps each
+synthetic bulk profile to a predicted pseudo-bulk and divides by the
+observed pseudo-bulk; \code{1} uses the ratio to the bulk mean directly.}
 
-\item{scaling_factor}{Numeric exponent applied to the per-gene mapping.}
+\item{scaling_factor}{The scale factor \eqn{\lambda}: \code{0} no injected
+variation, \code{1} realistic bulk-derived variation, \code{>1} amplified
+variation for stress-testing.}
 
-\item{use.pc}{Logical / integer flag controlling the high fold-change
-correction step.}
+\item{use.pc}{Logical / integer; if true, genes whose simulated total is
+extremely inflated relative to the reference are rescaled after simulation.}
 
-\item{n_cores}{Integer; cores passed to \code{scDesign3::simu_new}.}
+\item{n_cores}{Cores passed to \code{scDesign3::simu_new}.}
 
-\item{sc_quantile}{Numeric quantile used for capping (reserved).}
+\item{sc_quantile}{Reserved; not used.}
 
-\item{save.dir}{Directory in which synthetic replicate files are written.}
+\item{save.dir}{Directory in which synthetic samples are written.}
+
+\item{lib_size}{Mean bulk library size; defaults to
+\code{sum(bulkRNA_matrix) / ncol(bulkRNA_matrix)}.}
 }
 \value{
-Called for its side effects: writes one \code{replicate<i>.csv} file per
-synthetic replicate to \code{save.dir}. Returns \code{NULL} invisibly.
+Invisibly, the paths of the written \code{replicate<r>.csv} files.
 }
 \description{
-\code{synthreplicate_gen_sc} is the final step of the \pkg{scStable} workflow.
-For each synthetic bulk replicate it derives a per-gene mapping (fold-change)
-factor, re-weights the scDesign3 mean matrix accordingly, and simulates a new
-single-cell count matrix with \code{scDesign3::simu_new}.
+For each synthetic bulk profile from \code{\link{synthreplicate_gen_bulk}},
+\code{synthreplicate_gen_sc} converts it back to the pseudo-bulk scale
+(removing the offset \eqn{\xi_g} and inverting the log transform), computes
+gene-wise multiplicative adjustments \eqn{\omega_{gr}^\lambda}, re-weights the
+scDesign3 mean matrix and simulates a new count matrix with
+\code{scDesign3::simu_new}. All synthetic samples contain the same cells as
+the scRNA-seq reference. Each sample is written to
+\code{<save.dir>/replicate<r>.csv} (tab-separated, genes x cells).
 }

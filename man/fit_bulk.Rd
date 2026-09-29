@@ -2,7 +2,7 @@
 % Please edit documentation in R/fit_bulk.R
 \name{fit_bulk}
 \alias{fit_bulk}
-\title{Fit the bulk RNA-seq distribution for scStable}
+\title{Step 2: estimate bulk-derived between-sample variation}
 \usage{
 fit_bulk(
   bulkRNA_matrix,
@@ -36,12 +36,24 @@ when \code{normal_test = "auto"}.}
 }
 \value{
 A list with elements \code{bulk_data_counts} (log-transformed counts),
-\code{mu} (gene means), \code{cov} (gene-gene covariance) and
-\code{optimal_c} (per-gene log offsets).
+\code{mu} (gene means), \code{cov} (gene-gene sample covariance),
+\code{optimal_c} (per-gene pseudo-counts \eqn{c_g}), \code{bulk_mean}
+(per-gene mean on the input scale; its sum over the genes used is the mean
+bulk library size that aligns the scRNA-seq pseudo-bulk) and
+\code{n_samples} (number of bulk samples).
 }
 \description{
-\code{fit_bulk} estimates, for each gene, a log-offset constant \code{c} that
-best normalises the bulk RNA-seq counts (\code{log(count + c)}), then computes
-the gene-wise mean vector and the gene-gene covariance matrix used by
-\pkg{scStable} to sample synthetic bulk replicates.
+\code{fit_bulk} is used in \strong{reference mode}. For each gene it chooses
+a pseudo-count \eqn{c_g} so that \eqn{\log(x_{gs} + c_g)} is approximately
+Gaussian across bulk samples, then estimates the mean vector
+\eqn{\hat\mu} and covariance matrix \eqn{\hat\Sigma} of the Gaussian bulk
+model. The search for \eqn{c_g} runs over \code{seq(1, c_value_max, by = step)}
+and stops early at the first value whose normality p-value reaches
+\code{p_val_threshold}; otherwise the value with the largest p-value is used.
+}
+\details{
+The returned list is also the \emph{pre-estimated parameter set} used by the
+\strong{bulk-reference-free mode}: fit it once on a large tissue-matched
+resource (e.g. GTEx), save it with \code{saveRDS()}, and pass it as
+\code{bulk_params} to \code{\link{synthreplicate_from_tissue}}.
 }

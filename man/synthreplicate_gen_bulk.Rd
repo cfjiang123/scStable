@@ -2,48 +2,62 @@
 % Please edit documentation in R/synthreplicate_gen_bulk.R
 \name{synthreplicate_gen_bulk}
 \alias{synthreplicate_gen_bulk}
-\title{Generate synthetic bulk RNA-seq replicates for scStable}
+\title{Step 3 (part 1): draw synthetic bulk RNA-seq samples}
 \usage{
 synthreplicate_gen_bulk(
-  bulkRNA_matrix,
+  bulkRNA_matrix = NULL,
   mu,
   cov,
   optimal_c,
   scRNA_matrix,
-  use.cor = 1,
+  use.cor = NULL,
   min.eig = 0.01,
-  number.replicate = 10
+  number.replicate = 100,
+  lib_size = NULL,
+  n_samples = NULL
 )
 }
 \arguments{
-\item{bulkRNA_matrix}{Filtered bulk matrix (genes x samples) from
+\item{bulkRNA_matrix}{Bulk matrix (genes x samples) from
+\code{\link{synthreplicate_prep}} (reference mode). Only its mean library
+size and number of samples are used. May be \code{NULL} if \code{lib_size}
+is given (bulk-reference-free mode).}
+
+\item{mu, cov, optimal_c}{Gene-wise mean, gene-gene covariance and
+pseudo-counts from \code{\link{fit_bulk}} (or a pre-estimated parameter
+set), in the same gene order as \code{scRNA_matrix}.}
+
+\item{scRNA_matrix}{Single-cell count matrix (genes x cells) from
 \code{\link{synthreplicate_prep}}.}
 
-\item{mu}{Gene-wise mean vector from \code{\link{fit_bulk}}.}
+\item{use.cor}{Covariance used for sampling: \code{3} full covariance
+(multivariate normal), \code{2} diagonal covariance (independent truncated
+normals), \code{1} truncated multivariate normal (Gibbs sampler). The
+default \code{NULL} follows the manuscript: \code{3} if the bulk reference
+has at least 30 samples, otherwise \code{2}.}
 
-\item{cov}{Gene-gene covariance matrix from \code{\link{fit_bulk}}.}
+\item{min.eig}{Tolerance passed to \code{corpcor::make.positive.definite}
+when \code{use.cor = 1}.}
 
-\item{optimal_c}{Per-gene log offsets from \code{\link{fit_bulk}}.}
+\item{number.replicate}{Number of synthetic samples \eqn{R} to draw.}
 
-\item{scRNA_matrix}{Filtered single-cell matrix (genes x cells) from
-\code{\link{synthreplicate_prep}}.}
+\item{lib_size}{Mean bulk library size. Defaults to
+\code{sum(bulkRNA_matrix) / ncol(bulkRNA_matrix)}; supply it (e.g.
+\code{sum(fit_bulk()$bulk_mean)}) when \code{bulkRNA_matrix} is \code{NULL}.}
 
-\item{use.cor}{Integer; \code{1} truncated multivariate normal (correlated),
-\code{2} independent truncated normals, \code{3} plain multivariate normal.}
-
-\item{min.eig}{Numeric tolerance passed to
-\code{corpcor::make.positive.definite} when \code{use.cor = 1}.}
-
-\item{number.replicate}{Integer; number of synthetic bulk replicates to draw.}
+\item{n_samples}{Number of bulk samples behind \code{cov}, used only to
+choose \code{use.cor} when it is \code{NULL}. Defaults to
+\code{ncol(bulkRNA_matrix)}.}
 }
 \value{
-A list with elements \code{d} (per-gene shift between pseudo-bulk and real
-bulk) and \code{sampling_bulk} (genes x replicates matrix of synthetic bulk
-profiles).
+A list with \code{d} (per-gene offset \eqn{\xi_g}) and
+\code{sampling_bulk} (genes x \code{number.replicate} matrix of synthetic
+bulk profiles on the log scale).
 }
 \description{
-\code{synthreplicate_gen_bulk} draws synthetic bulk RNA-seq profiles from the
-bulk model fitted by \code{\link{fit_bulk}}. A pseudo-bulk profile derived from
-the single-cell data is used to set per-gene truncation bounds so that sampled
-(log-)expression values remain biologically valid.
+\code{synthreplicate_gen_bulk} draws \code{number.replicate} synthetic bulk
+profiles on the log scale from the Gaussian bulk model
+\eqn{N(\hat\mu, \hat\Sigma)} and computes the gene-specific offset
+\eqn{\xi_g} (returned as \code{d}) that aligns the scRNA-seq pseudo-bulk with
+the bulk RNA-seq reference.
 }
