@@ -3,16 +3,16 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-**scStable** generates multiple synthetic scRNA-seq samples from a single
-scRNA-seq sample (the *scRNA-seq reference*). All synthetic samples contain the
-same cells as the reference. They differ in gene expression by realistic
-between-sample variation learned from multi-sample bulk RNA-seq data. The
-synthetic samples support stability assessment of downstream discoveries (such
-as DE genes and clusters) and stability-driven selection of analysis methods.
+**scStable** generates multiple synthetic scRNA-seq samples from a single-sample
+scRNA-seq. All synthetic scRNA-seq samples contain the same cells as the 
+reference. They differ in gene expression by between-sample variation learned 
+from multi-sample bulk RNA-seq data. The synthetic samples support stability 
+assessment of downstream discoveries (such as DE genes and clusters) and 
+stability-driven selection of analysis methods and hyperparameters.
 
 scStable has two modes:
 
-* **Reference mode**: you supply a tissue- and condition-matched multi-sample
+* **Bulk-reference mode**: supply a tissue- and condition-matched multi-sample
   *bulk RNA-seq reference*. Its between-sample variation is estimated with
   `fit_bulk()` (Option A below).
 * **Bulk-reference-free mode**: no matched bulk reference is available.
@@ -66,7 +66,7 @@ stress-testing.
 
 ## Quick start
 
-### Option A: reference mode
+### Option A: bulk-reference mode
 
 ```r
 library(scStable)
