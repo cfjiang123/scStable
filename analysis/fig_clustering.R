@@ -13,9 +13,9 @@ suppressPackageStartupMessages({
 dir.create("figures", showWarnings = FALSE)
 dir.create("results", showWarnings = FALSE)
 
-# Settings scaled down for the 100-cell example. Manuscript (3,555 cells):
+
 # DIMS = 1:30, K_NN = 20, resolution 0.5 / 0.8 / 0.8,
-# grid n_pc {10, 20, 50} x k_nn {10, 20, 50} x res {0.4, 0.8, 1.2}, default npc50_knn20_res0.8.
+# grid n_pc {10, 20, 50} x k_nn {10, 20, 50} x res {0.4, 0.8, 1.2}.
 METHODS    <- c("seurat_louvain", "seurat_louvain_refine", "seurat_slm",
                 "kmeans", "hclust_ward", "gmm_mclust")
 RESOLUTION <- c(seurat_louvain = 0.8, seurat_louvain_refine = 1.2, seurat_slm = 1.2)
@@ -115,7 +115,7 @@ grid_res <- data.frame(param = grid_keys, GRID, t(sapply(seq_len(nrow(GRID)), fu
   stability_ARI = mean(sapply(grid_syn, function(s) adjustedRandIndex(s[, i], grid_ref[, i]))),
   truth_ARI     = adjustedRandIndex(grid_ref[, i], cell_type),
   n_clusters    = length(unique(grid_ref[, i]))))))
-# a single cluster is trivially stable, so it is not eligible for selection
+
 grid_res <- grid_res[order(grid_res$n_clusters < 2, -grid_res$stability_ARI), ]
 write.csv(grid_res, "results/clustering_C_louvain_grid.csv", row.names = FALSE)
 selected <- grid_res$param[1]
