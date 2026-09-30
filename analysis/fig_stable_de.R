@@ -2,7 +2,7 @@
 # lambda = 1 synthetic sample; q-value stability across synthetic samples.
 #   A  95% quantile intervals of q for example genes; density of interval length
 #   B  reference DE rank vs stability rank (interval length) for six tests
-#   stable DE genes: reference q < 0.05 and upper interval end < 0.05
+#   stable DE genes: reference q < 0.05 and interval length L_q < 0.05
 suppressPackageStartupMessages({
   library(Seurat)
   library(ggplot2)
@@ -12,7 +12,7 @@ dir.create("figures", showWarnings = FALSE)
 dir.create("results", showWarnings = FALSE)
 
 TESTS <- c("wilcox", "negbinom", "bimod", "t", "LR", "poisson")
-PAIR  <- c("typeA", "typeB")
+PAIR  <- c("regulatory.t", "b.cells")
 ALPHA <- 0.05
 CONF  <- 0.95
 
@@ -53,7 +53,7 @@ names(intervals) <- TESTS
 # ---- stable vs other DE genes (Wilcoxon) ----
 w <- intervals$wilcox
 w <- w[!is.na(w$ref_q) & w$ref_q < ALPHA, ]
-w$stable <- !is.na(w$upper) & w$upper < ALPHA
+w$stable <- !is.na(w$L_q) & w$L_q < ALPHA
 write.csv(w[order(w$ref_q), ], "results/stable_de_wilcox.csv", row.names = FALSE)
 cat("Reference DE genes:", nrow(w), " stable:", sum(w$stable), " other:", sum(!w$stable), "\n")
 

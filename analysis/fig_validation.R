@@ -26,7 +26,7 @@ stopifnot(all(sapply(samples, function(m) identical(dimnames(m), dimnames(ref)))
 # ---- A: UMAP fitted on the reference, synthetic samples projected; mLISI ----
 set.seed(1)
 pca_fit  <- irlba::prcomp_irlba(t(log1p(ref)), n = 20, center = TRUE, scale. = TRUE)
-umap_fit <- umap::umap(pca_fit$x)
+umap_fit <- umap::umap(pca_fit$x, n_neighbors = 30, min_dist = 0.3)
 project  <- function(m) predict(umap_fit, predict(pca_fit, newdata = t(log1p(m))))
 umaps    <- c(list(Reference = umap_fit$layout), lapply(samples[1:2], project))
 

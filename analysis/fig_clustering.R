@@ -14,16 +14,16 @@ dir.create("figures", showWarnings = FALSE)
 dir.create("results", showWarnings = FALSE)
 
 
-# DIMS = 1:30, K_NN = 20, resolution 0.5 / 0.8 / 0.8,
+# DIMS = 1:10, K_NN = 20, resolution 0.8,
 # grid n_pc {10, 20, 50} x k_nn {10, 20, 50} x res {0.4, 0.8, 1.2}.
 METHODS    <- c("seurat_louvain", "seurat_louvain_refine", "seurat_slm",
                 "kmeans", "hclust_ward", "gmm_mclust")
-RESOLUTION <- c(seurat_louvain = 0.8, seurat_louvain_refine = 1.2, seurat_slm = 1.2)
+RESOLUTION <- c(seurat_louvain = 0.8, seurat_louvain_refine = 0.8, seurat_slm = 0.8)
 K          <- 4     # number of clusters for kmeans / Ward / GMM
 DIMS       <- 1:10
-K_NN       <- 10
-GRID       <- expand.grid(n_pc = c(5, 10, 20), k_nn = c(5, 10, 20), res = c(0.4, 0.8, 1.2))
-DEFAULT    <- "npc20_knn20_res0.8"
+K_NN       <- 20
+GRID       <- expand.grid(n_pc = c(10, 20, 50), k_nn = c(10, 20, 50), res = c(0.4, 0.8, 1.2))
+DEFAULT    <- "npc50_knn20_res0.8"
 
 ref       <- readRDS("data/synthetic/fit.rds")$prep$sc
 cell_type <- readRDS("data/cell_types.rds")[colnames(ref)]
@@ -72,7 +72,7 @@ agreement <- function(pred, truth) {
 
 set.seed(1)
 ref_pca  <- irlba::prcomp_irlba(t(log1p(ref)), n = 20, center = TRUE, scale. = TRUE)
-ref_umap <- umap::umap(ref_pca$x)$layout
+ref_umap <- umap::umap(ref_pca$x, n_neighbors = 30, min_dist = 0.3)$layout
 plot_umap <- function(col, title, legend) {
   df <- data.frame(UMAP1 = ref_umap[, 1], UMAP2 = ref_umap[, 2], col = col)
   ggplot(df, aes(UMAP1, UMAP2, color = col)) + geom_point(size = 1.5, alpha = 0.8) +
