@@ -1,0 +1,13 @@
+^analysis$
+^data$
+^figures$
+^results$
+^LICENSE\.md$
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.git$
+^\.github$
+^\.gitignore$
+^README\.Rmd$
+^doc$
+^Meta$
