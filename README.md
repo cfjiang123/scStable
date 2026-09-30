@@ -117,6 +117,43 @@ Alternatively, pass `tissue_name` and `gtex_data_dir` (a folder of per-tissue
 `SummarizedExperiment` `.RDS` files). The parameters are then estimated on the
 fly.
 
+## Assessing stability
+
+The script `inst/scripts/scStable_stability.R` computes the sample stability
+metrics of the manuscript from the synthetic samples. Each function documents
+its input and output in the script header.
+
+```r
+source(system.file("scripts", "scStable_stability.R", package = "scStable"))
+samples <- list_synthetic_samples("scStable_samples")   # replicate<r>.csv paths
+ref     <- prep$sc                                       # the scRNA-seq reference
+
+# Stable DE genes
+de <- stable_de(ref, samples, group = cell_type, ident.1 = "B", ident.2 = "T",
+                test.use = "wilcox")
+subset(de, stable)
+
+# Per-cell entropy stability from clusterings of the synthetic samples
+labels <- sapply(samples, function(f) seurat_louvain_grid(read_synthetic_sample(f),
+                 n_pc = 10, k_nn = 20, resolution = 0.8)[, 1])
+S <- entropy_stability(labels)
+
+# Hyperparameter selection by stability 
+sel <- stability_select(ref, samples, run_fun = seurat_louvain_grid)
+head(sel$summary)
+```
+
+| Function | Input | Output |
+|----------|-------|--------|
+| `quantile_interval()` | features x R matrix of any scalar summary T | `lower`, `upper`, length `L` per feature |
+| `stable_de()` | reference, samples, cell labels (or two conditions via `ref2`/`samples2`) | per-gene `ref_padj`, interval, `L`, `de`, `stable` |
+| `entropy_stability()` | cells x R cluster labels | per-cell stability S<sub>i</sub> in [0, 1] |
+| `stability_select()` | reference, samples, `run_fun` returning one label column per method/setting | ARI, NMI, Jaccard, FMI per specification, ranked |
+| `stability_path()` | named list of samples per scale factor λ | the same metrics along λ |
+
+Scripts reproducing the manuscript figures are in `analysis/` on GitHub (not
+part of the installed package);
+
 ## License
 
 MIT © Chengfeng Jiang.
